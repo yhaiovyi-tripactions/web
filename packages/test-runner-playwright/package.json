@@ -1,5 +1,5 @@
 {
-  "name": "@web/test-runner-playwright",
+  "name": "@yhaiovyi/web-test-runner-playwright",
   "version": "0.11.1",
   "publishConfig": {
     "access": "public"

@@ -1,4 +1,4 @@
-import { LaunchOptions, devices } from 'playwright';
+import { ConnectOptions, LaunchOptions, devices } from 'playwright';
 import * as playwright from 'playwright';
 import {
   PlaywrightLauncher,
@@ -14,6 +14,8 @@ export { ProductType, playwright };
 export interface PlaywrightLauncherArgs {
   product?: ProductType;
   launchOptions?: LaunchOptions;
+  wsEndpoint?: string;
+  connectOptions?: ConnectOptions;
   createBrowserContext?: CreateBrowserContextFn;
   createPage?: CreatePageFn;
   __experimentalWindowFocus__?: boolean;
@@ -26,6 +28,8 @@ export function playwrightLauncher(args: PlaywrightLauncherArgs = {}) {
   const {
     product = 'chromium',
     launchOptions = {},
+    wsEndpoint = '',
+    connectOptions = {},
     createBrowserContext = ({ browser }) => browser.newContext(),
     createPage = ({ context }) => context.newPage(),
     __experimentalWindowFocus__ = false,
@@ -41,6 +45,8 @@ export function playwrightLauncher(args: PlaywrightLauncherArgs = {}) {
   return new PlaywrightLauncher(
     product,
     launchOptions,
+    wsEndpoint,
+    connectOptions,
     createBrowserContext,
     createPage,
     __experimentalWindowFocus__,

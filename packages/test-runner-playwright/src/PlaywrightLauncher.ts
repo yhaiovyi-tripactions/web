@@ -1,4 +1,10 @@
-import playwright, { Browser, Page, LaunchOptions, BrowserContext } from 'playwright';
+import playwright, {
+  Browser,
+  Page,
+  LaunchOptions,
+  BrowserContext,
+  ConnectOptions,
+} from 'playwright';
 import { BrowserLauncher, TestRunnerCoreConfig, CoverageMapData } from '@web/test-runner-core';
 import { PlaywrightLauncherPage } from './PlaywrightLauncherPage.js';
 
@@ -22,6 +28,8 @@ export class PlaywrightLauncher implements BrowserLauncher {
   public concurrency?: number;
   private product: ProductType;
   private launchOptions: LaunchOptions;
+  private wsEndpoint: string;
+  private connectOptions: ConnectOptions;
   private createBrowserContextFn: CreateBrowserContextFn;
   private createPageFn: CreatePageFn;
   private config?: TestRunnerCoreConfig;
@@ -37,6 +45,8 @@ export class PlaywrightLauncher implements BrowserLauncher {
   constructor(
     product: ProductType,
     launchOptions: LaunchOptions,
+    wsEndpoint: string,
+    connectOptions: ConnectOptions,
     createBrowserContextFn: CreateBrowserContextFn,
     createPageFn: CreatePageFn,
     __experimentalWindowFocus__?: boolean,
@@ -44,6 +54,8 @@ export class PlaywrightLauncher implements BrowserLauncher {
   ) {
     this.product = product;
     this.launchOptions = launchOptions;
+    this.wsEndpoint = wsEndpoint;
+    this.connectOptions = connectOptions;
     this.createBrowserContextFn = createBrowserContextFn;
     this.createPageFn = createPageFn;
     this.concurrency = concurrency;
@@ -85,14 +97,25 @@ export class PlaywrightLauncher implements BrowserLauncher {
     return this.getPage(sessionId).url();
   }
 
+  protected async runBrowser() {
+    if (this.wsEndpoint) {
+      return playwright[this.product].connect(this.wsEndpoint, this.connectOptions);
+    }
+    return playwright[this.product].launch(this.launchOptions);
+  }
+
+  protected async runBrowserWithDevtools() {
+    return playwright[this.product].launch({
+      ...this.launchOptions,
+      // devtools is only supported on chromium
+      devtools: this.product === 'chromium',
+      headless: false,
+    });
+  }
+
   async startDebugSession(sessionId: string, url: string) {
     if (!this.debugBrowser) {
-      this.debugBrowser = await playwright[this.product].launch({
-        ...this.launchOptions,
-        // devtools is only supported on chromium
-        devtools: this.product === 'chromium',
-        headless: false,
-      });
+      this.debugBrowser = await this.runBrowserWithDevtools();
     }
 
     const page = await this.createNewPage(this.debugBrowser);
@@ -140,7 +163,7 @@ export class PlaywrightLauncher implements BrowserLauncher {
 
     if (!this.browser || !this.browser?.isConnected()) {
       this.__launchBrowserPromise = (async () => {
-        const browser = await playwright[this.product].launch(this.launchOptions);
+        const browser = await this.runBrowser();
         return browser;
       })();
       const browser = await this.__launchBrowserPromise;
